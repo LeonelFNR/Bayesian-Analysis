@@ -1,4 +1,4 @@
-
+# Name : Leonel Fernando Nabaza Ruibal
 ## ------------------------------------------------------------------------
 library(ggplot2)
 library(dplyr)
@@ -62,16 +62,24 @@ ggplot(df) +
 ## ------------------------------------------------------------------------
 ## Predictive simulation
 
-# Simulate 10000 draws from prior density: p_sim
+# Simulate 10000 draws from prior density: p_sim as Beta (a = 200, b = 200)
+# random vector where each compontnent is a random draw from beta(200,200)
+p_sim <- rbeta(10000, 200, 200)
 
 # Simulate 10000 draws from the predictive density: y_sim
+y_sim <- rbinom(10000, 20, p_sim)
 
 # Plot the prior predictive density
+ggplot(tibble(y_sim), aes(x = y_sim)) +
+  geom_histogram(binwidth = 1, color = "black", fill = "white") +
+  xlab("Number of tails in 20 flips") +
+  ylab("Frequency")
 
 # Compute the probability of less than 5 tails
+mean(y_sim < 5)
 
 # Find a 90 percent prediction interval for the number of tails
-
+quantile(y_sim, c(0.05,0.95))
 
 
 
