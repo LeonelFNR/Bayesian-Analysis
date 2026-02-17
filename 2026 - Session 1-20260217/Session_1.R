@@ -66,6 +66,12 @@ ggplot(df) +
 # random vector where each compontnent is a random draw from beta(200,200)
 p_sim <- rbeta(10000, 200, 200)
 
+# plot p_sim via geom density
+ggplot(tibble(p_sim), aes(x = p_sim)) +
+  geom_density() +
+  xlab("Probability of tails in a coin flip") +
+  ylab("Density")
+
 # Simulate 10000 draws from the predictive density: y_sim
 y_sim <- rbinom(10000, 20, p_sim)
 
