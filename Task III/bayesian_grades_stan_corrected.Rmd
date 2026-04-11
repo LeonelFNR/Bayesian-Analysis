@@ -257,7 +257,7 @@ Note that the upper bound of the interval exceeds 10. This is a consequence of t
 
 Once the model has been fitted, the interval is obtained directly from the posterior quantiles of `y_new_girl`:
 
-```{r posterior-interval-stan, eval=FALSE}
+```{r posterior-interval-stan, eval=TRUE}
 post <- rstan::extract(fit)
 
 ci_stan <- quantile(post$y_new_girl, probs = c(0.025, 0.5, 0.975))
@@ -266,7 +266,7 @@ ci_stan
 
 And we can visualize the posterior predictive distribution:
 
-```{r posterior-predictive-plot, eval=FALSE}
+```{r posterior-predictive-plot, eval=TRUE}
 hist(post$y_new_girl, breaks = 40,
      main = "Posterior predictive distribution for a new girl",
      xlab = "y_new_girl")
@@ -290,7 +290,7 @@ To assess whether grades are "equal", it is useful to examine:
 
 Useful code to summarize this is:
 
-```{r delta-summary, eval=FALSE}
+```{r delta-summary, eval=TRUE}
 ci_delta <- quantile(post$delta, probs = c(0.025, 0.5, 0.975))
 prob_boys_higher <- mean(post$delta > 0)
 
