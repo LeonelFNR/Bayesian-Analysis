@@ -2,6 +2,7 @@
 \PassOptionsToPackage{unicode}{hyperref}
 \PassOptionsToPackage{hyphens}{url}
 \documentclass[
+  english,
   12pt,
 ]{article}
 \usepackage{xcolor}
@@ -111,20 +112,22 @@
 % get rid of language-specific shorthands (see #6817):
 \let\LanguageShortHands\languageshorthands
 \def\languageshorthands#1{}
+\ifLuaTeX
+  \usepackage[english]{selnolig} % disable illegal ligatures
+\fi
 \setlength{\emergencystretch}{3em} % prevent overfull lines
 \providecommand{\tightlist}{%
   \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
-\\usepackage[english]{babel}
-\\usepackage{amsmath,amssymb,amsthm}
-\\usepackage{booktabs}
-\\usepackage{float}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs}
+\usepackage{float}
 \usepackage{bookmark}
 \IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
 \urlstyle{same}
 \hypersetup{
   pdftitle={Bayesian Analysis Task III},
   pdfauthor={Leonel Fernando Nabaza Ruibal},
-  pdflang={eng},
+  pdflang={en},
   hidelinks,
   pdfcreator={LaTeX via pandoc}}
 
@@ -214,7 +217,7 @@ girls.
 \end{Highlighting}
 \end{Shaded}
 
-\begin{center}\includegraphics{bayesian_grades_stan_files/figure-latex/data-boxplot-1} \end{center}
+\begin{center}\includegraphics{bayesian_grades_stan_corrected_files/figure-latex/data-boxplot-1} \end{center}
 
 At first glance, the sample means are very similar, but the dispersion
 does not appear to be exactly the same in both groups. Moreover, grades
@@ -266,6 +269,13 @@ priors}\label{justification-of-the-priors}
   excessively heavy tails in such a small sample.
 \end{itemize}
 
+The corresponding posterior distribution is given by \[
+p(\beta_0, \beta_1, \sigma \mid y)
+\propto
+\left[\prod_{i=1}^n \mathcal{N}(y_i \mid \beta_0 + \beta_1 x_i, \sigma)\right]
+p(\beta_0)\, p(\beta_1)\, p(\sigma).
+\]
+
 \subsection{Prior plots}\label{prior-plots}
 
 \begin{Shaded}
@@ -281,7 +291,7 @@ priors}\label{justification-of-the-priors}
 \end{Highlighting}
 \end{Shaded}
 
-\begin{center}\includegraphics{bayesian_grades_stan_files/figure-latex/prior-plots-statement-model-1} \end{center}
+\begin{center}\includegraphics{bayesian_grades_stan_corrected_files/figure-latex/prior-plots-statement-model-1} \end{center}
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -440,8 +450,8 @@ deviations. In addition, in \texttt{generated\ quantities} we request:
   \AttributeTok{file =} \StringTok{"bayesian\_grades\_model.stan"}\NormalTok{,}
   \AttributeTok{data =}\NormalTok{ stan\_data,}
   \AttributeTok{chains =} \DecValTok{4}\NormalTok{,}
-  \AttributeTok{iter =} \DecValTok{4000}\NormalTok{,}
-  \AttributeTok{warmup =} \DecValTok{2000}\NormalTok{,}
+  \AttributeTok{iter =} \DecValTok{400}\NormalTok{,}
+  \AttributeTok{warmup =} \DecValTok{100}\NormalTok{,}
   \AttributeTok{seed =} \DecValTok{1234}\NormalTok{,}
   \AttributeTok{refresh =} \DecValTok{0}
 \NormalTok{)}
@@ -451,11 +461,24 @@ deviations. In addition, in \texttt{generated\ quantities} we request:
 \end{Highlighting}
 \end{Shaded}
 
-\begin{quote}
-\textbf{Note}: the previous chunk is set to \texttt{eval=FALSE} so that
-the document can be opened even if \texttt{rstan} is not installed. If
-you already have it configured, you can change it to \texttt{eval=TRUE}.
-\end{quote}
+\begin{verbatim}
+## Inference for Stan model: anon_model.
+## 4 chains, each with iter=400; warmup=100; thin=1; 
+## post-warmup draws per chain=300, total post-warmup draws=1200.
+## 
+##             mean se_mean   sd  2.5%  50% 97.5% n_eff Rhat
+## mu_boys     7.34    0.03 0.69  5.99 7.36  8.61   424 1.01
+## mu_girls    7.27    0.03 0.65  5.84 7.29  8.48   662 1.00
+## sigma_boys  1.84    0.02 0.59  1.05 1.74  3.37  1044 1.00
+## sigma_girls 1.71    0.01 0.49  1.03 1.60  2.93  1113 1.00
+## delta       0.06    0.04 0.97 -1.78 0.07  1.96   473 1.00
+## y_new_girl  7.33    0.06 1.86  3.43 7.37 11.18  1117 1.00
+## 
+## Samples were drawn using NUTS(diag_e) at Sat Apr 11 16:46:43 2026.
+## For each parameter, n_eff is a crude measure of effective sample size,
+## and Rhat is the potential scale reduction factor on split chains (at 
+## convergence, Rhat=1).
+\end{verbatim}
 
 \section{c) 95\% credible interval for a new female
 student}\label{c-95-credible-interval-for-a-new-female-student}
@@ -504,6 +527,11 @@ y_{\text{new},g} \mid y \sim t_{n_g-1}\left(\bar y_g,\; s_g\sqrt{1+\frac{1}{n_g}
 
 This interval is a useful reference, but the main answer to the exercise
 should be based on the Bayesian model fitted in Stan.
+
+Note that the upper bound of the interval exceeds 10. This is a
+consequence of the normality assumption, since the normal distribution
+has unbounded support, while grades are restricted to the interval
+\([0,10]\).
 
 \subsection{Interval from Stan}\label{interval-from-stan}
 
@@ -564,11 +592,21 @@ Useful code to summarize this is:
 \end{Highlighting}
 \end{Shaded}
 
+From the Stan output, the 95\% credible interval for \(\delta\) is
+approximately \[
+(-1.78,\; 1.96).
+\]
+
+Since this interval clearly contains 0, there is no strong evidence of a
+difference between the mean grades of boys and girls.
+
+Moreover, the posterior mean of \(\delta\) is close to zero, indicating
+that any difference is small relative to the variability in the data.
+
 If the interval for \(\delta\) contains 0 comfortably, the evidence in
 favor of differences between sexes will be weak.
 
-\subsection{Compact answer for
-submission}\label{compact-answer-for-submission}
+\subsection{Answer}\label{answer}
 
 \begin{enumerate}
 \def\labelenumi{\arabic{enumi}.}
@@ -619,52 +657,8 @@ Method & Lower bound & Upper bound \\
 Analytical t approximation & 3.3 & 11.328 \\
 \end{longtable}
 
-\section{Compilation instructions}\label{compilation-instructions}
-
-\subsection{Option 1: compile the PDF from
-RStudio}\label{option-1-compile-the-pdf-from-rstudio}
-
-\begin{itemize}
-\tightlist
-\item
-  Open \texttt{bayesian\_grades\_stan.Rmd}.
-\item
-  Install packages if needed:
-\end{itemize}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\FunctionTok{install.packages}\NormalTok{(}\FunctionTok{c}\NormalTok{(}\StringTok{"rmarkdown"}\NormalTok{, }\StringTok{"knitr"}\NormalTok{, }\StringTok{"rstan"}\NormalTok{, }\StringTok{"bayesplot"}\NormalTok{, }\StringTok{"posterior"}\NormalTok{))}
-\end{Highlighting}
-\end{Shaded}
-
-\begin{itemize}
-\tightlist
-\item
-  If you do not have LaTeX installed:
-\end{itemize}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\FunctionTok{install.packages}\NormalTok{(}\StringTok{"tinytex"}\NormalTok{)}
-\NormalTok{tinytex}\SpecialCharTok{::}\FunctionTok{install\_tinytex}\NormalTok{()}
-\end{Highlighting}
-\end{Shaded}
-
-\begin{itemize}
-\tightlist
-\item
-  Click \textbf{Knit to PDF}.
-\end{itemize}
-
-\subsection{Option 2: from the R
-console}\label{option-2-from-the-r-console}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\NormalTok{rmarkdown}\SpecialCharTok{::}\FunctionTok{render}\NormalTok{(}\StringTok{"bayesian\_grades\_stan.Rmd"}\NormalTok{, }\AttributeTok{output\_format =} \StringTok{"pdf\_document"}\NormalTok{)}
-\end{Highlighting}
-\end{Shaded}
-
+In conclusion, the data do not provide strong evidence that boys and
+girls have different grades. Any observed difference is small compared
+to the overall variability, and is not practically significant.
 
 \end{document}

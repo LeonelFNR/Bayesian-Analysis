@@ -1,32 +1,21 @@
 ---
 title: "Bayesian Analysis Task III"
 author: "Leonel Fernando Nabaza Ruibal"
-date: "`r format(Sys.Date(), '%d/%m/%Y')`"
+date: "11/04/2026"
 output:
   pdf_document:
     toc: true
     number_sections: true
 geometry: margin=2.5cm
 fontsize: 12pt
-lang: eng
+lang: en
 header-includes:
-  - \\usepackage[english]{babel}
-  - \\usepackage{amsmath,amssymb,amsthm}
-  - \\usepackage{booktabs}
-  - \\usepackage{float}
+  - '\usepackage{amsmath,amssymb,amsthm}'
+  - '\usepackage{booktabs}'
+  - '\usepackage{float}'
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(
-  echo = TRUE,
-  warning = FALSE,
-  message = FALSE,
-  fig.width = 7,
-  fig.height = 4.5,
-  fig.align = 'center'
-)
-set.seed(1234)
-```
+
 
 # Wording and data
 
@@ -34,7 +23,8 @@ We want to study whether the final grades in the *Bayesian Analysis* course are 
 
 The observed data are:
 
-```{r data}
+
+``` r
 boys  <- c(9.6, 7.0, 5.0, 8.0, 8.4, 6.4)
 girls <- c(6.1, 9.1, 8.8, 5.7, 8.9, 6.1, 6.5)
 
@@ -47,6 +37,24 @@ df <- data.frame(
 knitr::kable(df, col.names = c("grade", "sex", "group"), booktabs = TRUE)
 ```
 
+
+
+| grade| sex|group |
+|-----:|---:|:-----|
+|   9.6|   1|boys  |
+|   7.0|   1|boys  |
+|   5.0|   1|boys  |
+|   8.0|   1|boys  |
+|   8.4|   1|boys  |
+|   6.4|   1|boys  |
+|   6.1|   0|girls |
+|   9.1|   0|girls |
+|   8.8|   0|girls |
+|   5.7|   0|girls |
+|   8.9|   0|girls |
+|   6.1|   0|girls |
+|   6.5|   0|girls |
+
 The statement proposes the model
 \[
 y_i \mid \beta_0, \beta_1, \sigma \sim \mathcal N(\beta_0 + \beta_1\, \text{sex}_i, \sigma),
@@ -55,12 +63,20 @@ where \(\text{sex}_i = 1\) for boys and \(\text{sex}_i = 0\) for girls.
 
 # Initial exploration
 
-```{r initial-summary}
+
+``` r
 summary_by_group <- aggregate(grade ~ group, data = df, function(x) c(n = length(x), mean = mean(x), sd = sd(x)))
 summary_by_group
 ```
 
-```{r data-boxplot}
+```
+##   group  grade.n grade.mean grade.sd
+## 1  boys 6.000000   7.400000 1.619877
+## 2 girls 7.000000   7.314286 1.534523
+```
+
+
+``` r
 library(ggplot2)
 
 ggplot(df, aes(x = group, y = grade)) +
@@ -68,6 +84,10 @@ ggplot(df, aes(x = group, y = grade)) +
   geom_jitter(width = 0.1, height = 0) +
   labs(title = "Grades by group", x = "Group", y = "Grade")
 ```
+
+
+
+\begin{center}\includegraphics{bayesian_grades_stan_corrected_files/figure-latex/data-boxplot-1} \end{center}
 
 At first glance, the sample means are very similar, but the dispersion does not appear to be exactly the same in both groups. Moreover, grades are bounded between 0 and 10, so a pure normal model does not strictly respect the support of the variable.
 
@@ -100,9 +120,18 @@ A reasonable choice of weakly informative priors is
 - For \(\beta_1\), centering at 0 expresses that *a priori* we do not favor either group having better grades.
 - The half-normal prior for \(\sigma\) guarantees positivity and avoids excessively heavy tails in such a small sample.
 
+The corresponding posterior distribution is given by
+\[
+p(\beta_0, \beta_1, \sigma \mid y)
+\propto
+\left[\prod_{i=1}^n \mathcal{N}(y_i \mid \beta_0 + \beta_1 x_i, \sigma)\right]
+p(\beta_0)\, p(\beta_1)\, p(\sigma).
+\]
+
 ## Prior plots
 
-```{r prior-plots-statement-model}
+
+``` r
 par(mfrow = c(1, 3))
 curve(dnorm(x, mean = 7, sd = 2), from = -1, to = 12,
       main = expression(paste("Prior for ", beta[0])), xlab = expression(beta[0]), ylab = "density")
@@ -111,6 +140,13 @@ curve(dnorm(x, mean = 0, sd = 2), from = -6, to = 6,
 xs <- seq(0, 6, length.out = 500)
 plot(xs, 2*dnorm(xs, mean = 0, sd = 2), type = "l",
      main = expression(paste("Prior for ", sigma)), xlab = expression(sigma), ylab = "density")
+```
+
+
+
+\begin{center}\includegraphics{bayesian_grades_stan_corrected_files/figure-latex/prior-plots-statement-model-1} \end{center}
+
+``` r
 par(mfrow = c(1, 1))
 ```
 
@@ -148,7 +184,8 @@ Below we use the model with separate means and separate standard deviations. In 
 - the difference in means \(\delta = \mu_b - \mu_g\),
 - a posterior predictive draw for a new girl, `y_new_girl`.
 
-```{r write-stan-file, eval=TRUE}
+
+``` r
 stan_code <- '
 data {
   int<lower=1> N_boys;
@@ -184,9 +221,43 @@ writeLines(stan_code, "bayesian_grades_model.stan")
 cat(stan_code)
 ```
 
+```
+## 
+## data {
+##   int<lower=1> N_boys;
+##   int<lower=1> N_girls;
+##   vector[N_boys] y_boys;
+##   vector[N_girls] y_girls;
+## }
+## parameters {
+##   real mu_boys;
+##   real mu_girls;
+##   real<lower=0> sigma_boys;
+##   real<lower=0> sigma_girls;
+## }
+## model {
+##   // priors
+##   mu_boys ~ normal(7, 2);
+##   mu_girls ~ normal(7, 2);
+##   sigma_boys ~ normal(0, 2);
+##   sigma_girls ~ normal(0, 2);
+## 
+##   // likelihood
+##   y_boys ~ normal(mu_boys, sigma_boys);
+##   y_girls ~ normal(mu_girls, sigma_girls);
+## }
+## generated quantities {
+##   real delta;
+##   real y_new_girl;
+##   delta = mu_boys - mu_girls;
+##   y_new_girl = normal_rng(mu_girls, sigma_girls);
+## }
+```
+
 ## Fitting with `rstan`
 
-```{r stan-fit, eval=TRUE}
+
+``` r
 library(rstan)
 library(bayesplot)
 library(posterior)
@@ -205,8 +276,8 @@ fit <- stan(
   file = "bayesian_grades_model.stan",
   data = stan_data,
   chains = 4,
-  iter = 4000,
-  warmup = 2000,
+  iter = 400,
+  warmup = 100,
   seed = 1234,
   refresh = 0
 )
@@ -215,7 +286,24 @@ print(fit, pars = c("mu_boys", "mu_girls", "sigma_boys", "sigma_girls", "delta",
       probs = c(0.025, 0.5, 0.975))
 ```
 
-> **Note**: the previous chunk is set to `eval=FALSE` so that the document can be opened even if `rstan` is not installed. If you already have it configured, you can change it to `eval=TRUE`.
+```
+## Inference for Stan model: anon_model.
+## 4 chains, each with iter=400; warmup=100; thin=1; 
+## post-warmup draws per chain=300, total post-warmup draws=1200.
+## 
+##             mean se_mean   sd  2.5%  50% 97.5% n_eff Rhat
+## mu_boys     7.34    0.03 0.69  5.99 7.36  8.61   424 1.01
+## mu_girls    7.27    0.03 0.65  5.84 7.29  8.48   662 1.00
+## sigma_boys  1.84    0.02 0.59  1.05 1.74  3.37  1044 1.00
+## sigma_girls 1.71    0.01 0.49  1.03 1.60  2.93  1113 1.00
+## delta       0.06    0.04 0.97 -1.78 0.07  1.96   473 1.00
+## y_new_girl  7.33    0.06 1.86  3.43 7.37 11.18  1117 1.00
+## 
+## Samples were drawn using NUTS(diag_e) at Sat Apr 11 16:46:43 2026.
+## For each parameter, n_eff is a crude measure of effective sample size,
+## and Rhat is the potential scale reduction factor on split chains (at 
+## convergence, Rhat=1).
+```
 
 # c) 95% credible interval for a new female student
 
@@ -225,7 +313,8 @@ We seek the 95% credible interval for the grade of a **new girl** who did not ta
 
 As a quick approximation, using only the girls' data:
 
-```{r girls-stats}
+
+``` r
 n_g <- length(girls)
 mean_g <- mean(girls)
 sd_g <- sd(girls)
@@ -233,24 +322,37 @@ sd_g <- sd(girls)
 c(n_girls = n_g, mean_girls = mean_g, sd_girls = sd_g)
 ```
 
+```
+##    n_girls mean_girls   sd_girls 
+##   7.000000   7.314286   1.534523
+```
+
 Under the normal model with the classical noninformative prior, the posterior predictive distribution for a new female observation is a Student \(t\):
 \[
 y_{\text{new},g} \mid y \sim t_{n_g-1}\left(\bar y_g,\; s_g\sqrt{1+\frac{1}{n_g}}\right).
 \]
 
-```{r analytical-interval}
+
+``` r
 scale_pred <- sd_g * sqrt(1 + 1 / n_g)
 ci_analytical <- mean_g + qt(c(0.025, 0.975), df = n_g - 1) * scale_pred
 ci_analytical
 ```
 
+```
+## [1]  3.300189 11.328382
+```
+
 This interval is a useful reference, but the main answer to the exercise should be based on the Bayesian model fitted in Stan.
+
+Note that the upper bound of the interval exceeds 10. This is a consequence of the normality assumption, since the normal distribution has unbounded support, while grades are restricted to the interval \([0,10]\).
 
 ## Interval from Stan
 
 Once the model has been fitted, the interval is obtained directly from the posterior quantiles of `y_new_girl`:
 
-```{r posterior-interval-stan, eval=FALSE}
+
+``` r
 post <- rstan::extract(fit)
 
 ci_stan <- quantile(post$y_new_girl, probs = c(0.025, 0.5, 0.975))
@@ -259,7 +361,8 @@ ci_stan
 
 And we can visualize the posterior predictive distribution:
 
-```{r posterior-predictive-plot, eval=FALSE}
+
+``` r
 hist(post$y_new_girl, breaks = 40,
      main = "Posterior predictive distribution for a new girl",
      xlab = "y_new_girl")
@@ -283,7 +386,8 @@ To assess whether grades are "equal", it is useful to examine:
 
 Useful code to summarize this is:
 
-```{r delta-summary, eval=FALSE}
+
+``` r
 ci_delta <- quantile(post$delta, probs = c(0.025, 0.5, 0.975))
 prob_boys_higher <- mean(post$delta > 0)
 
@@ -291,9 +395,18 @@ ci_delta
 prob_boys_higher
 ```
 
+From the Stan output, the 95% credible interval for \(\delta\) is approximately
+\[
+(-1.78,\; 1.96).
+\]
+
+Since this interval clearly contains 0, there is no strong evidence of a difference between the mean grades of boys and girls.
+
+Moreover, the posterior mean of \(\delta\) is close to zero, indicating that any difference is small relative to the variability in the data.
+
 If the interval for \(\delta\) contains 0 comfortably, the evidence in favor of differences between sexes will be weak.
 
-## Compact answer for submission
+## Answer
 
 1. The model in the statement is
    \[
@@ -317,7 +430,8 @@ If the interval for \(\delta\) contains 0 comfortably, the evidence in favor of 
    \]
    As a quick analytical approximation using the girls' data only, the interval is:
 
-```{r print-final-interval}
+
+``` r
 knitr::kable(
   data.frame(
     method = "Analytical t approximation",
@@ -329,28 +443,10 @@ knitr::kable(
 )
 ```
 
-# Compilation instructions
 
-## Option 1: compile the PDF from RStudio
 
-- Open `bayesian_grades_stan.Rmd`.
-- Install packages if needed:
+|Method                     | Lower bound| Upper bound|
+|:--------------------------|-----------:|-----------:|
+|Analytical t approximation |         3.3|      11.328|
 
-```{r install-note, eval=FALSE}
-install.packages(c("rmarkdown", "knitr", "rstan", "bayesplot", "posterior"))
-```
-
-- If you do not have LaTeX installed:
-
-```{r tinytex-note, eval=FALSE}
-install.packages("tinytex")
-tinytex::install_tinytex()
-```
-
-- Click **Knit to PDF**.
-
-## Option 2: from the R console
-
-```{r render-note, eval=FALSE}
-rmarkdown::render("bayesian_grades_stan.Rmd", output_format = "pdf_document")
-```
+In conclusion, the data do not provide strong evidence that boys and girls have different grades. Any observed difference is small compared to the overall variability, and is not practically significant.

@@ -17,6 +17,7 @@ model {
   mu_girls ~ normal(7, 2);
   sigma_boys ~ normal(0, 2);
   sigma_girls ~ normal(0, 2);
+
   // likelihood
   y_boys ~ normal(mu_boys, sigma_boys);
   y_girls ~ normal(mu_girls, sigma_girls);
